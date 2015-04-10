@@ -342,6 +342,11 @@ typedef struct {
     void bam_aux_append(bam1_t *b, const char tag[2], char type, int len, uint8_t *data);
     int bam_aux_del(bam1_t *b, uint8_t *s);
 
+    /* BAQ realignment. Beware, the future of these functions here is uncertain. */
+    int bam_realn(bam1_t *b, const char *ref);
+    int bam_prob_realn_core(bam1_t *b, const char *ref, int);
+    int bam_cap_mapQ(bam1_t *b, char *ref, int thres);
+
 /**************************
  *** Pileup and Mpileup ***
  **************************/

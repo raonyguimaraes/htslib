@@ -147,10 +147,13 @@ print-version:
 
 
 LIBHTS_OBJS = \
+	bam_baq.o \
 	kfunc.o \
 	knetfile.o \
+	kprobaln.o \
 	kstring.o \
 	bgzf.o \
+	errmod.o \
 	faidx.o \
 	hfile.o \
 	hfile_net.o \
@@ -242,6 +245,7 @@ synced_bcf_reader.o synced_bcf_reader.pico: synced_bcf_reader.c $(htslib_synced_
 vcf_sweep.o vcf_sweep.pico: vcf_sweep.c $(htslib_vcf_sweep_h) $(htslib_bgzf_h)
 vcfutils.o vcfutils.pico: vcfutils.c $(htslib_vcfutils_h)
 kfunc.o kfunc.pico: kfunc.c $(htslib_kfunc_h)
+kprobaln.o kprobaln.pico: kprobaln.c htslib/kprobaln.h
 regidx.o regidx.pico: regidx.c $(htslib_hts_h) $(htslib_kstring_h) $(htslib_kseq_h) $(htslib_khash_str2int_h) $(htslib_regidx_h)
 md5.o md5.pico: md5.c $(htslib_hts_h)
 

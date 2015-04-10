@@ -48,6 +48,7 @@ include $(HTSDIR)/htslib_vars.mk
 
 HTSLIB_PUBLIC_HEADERS = \
 	$(HTSDIR)/htslib/bgzf.h \
+	$(HTSDIR)/htslib/errmod.h \
 	$(HTSDIR)/htslib/faidx.h \
 	$(HTSDIR)/htslib/hfile.h \
 	$(HTSDIR)/htslib/hts.h \
@@ -55,6 +56,7 @@ HTSLIB_PUBLIC_HEADERS = \
 	$(HTSDIR)/htslib/khash.h \
 	$(HTSDIR)/htslib/klist.h \
 	$(HTSDIR)/htslib/knetfile.h \
+	$(HTSDIR)/htslib/kprobaln.h \
 	$(HTSDIR)/htslib/kseq.h \
 	$(HTSDIR)/htslib/ksort.h \
 	$(HTSDIR)/htslib/kstring.h \
@@ -68,7 +70,9 @@ HTSLIB_PUBLIC_HEADERS = \
 
 HTSLIB_ALL = \
 	$(HTSLIB_PUBLIC_HEADERS) \
+	$(HTSDIR)/bam_baq.c \
 	$(HTSDIR)/bgzf.c \
+	$(HTSDIR)/errmod.c \
 	$(HTSDIR)/faidx.c \
 	$(HTSDIR)/hfile_internal.h \
 	$(HTSDIR)/hfile.c \
@@ -77,6 +81,7 @@ HTSLIB_ALL = \
 	$(HTSDIR)/hts.c \
 	$(HTSDIR)/hts_internal.h \
 	$(HTSDIR)/knetfile.c \
+	$(HTSDIR)/kprobaln.c \
 	$(HTSDIR)/kstring.c \
 	$(HTSDIR)/md5.c \
 	$(HTSDIR)/regidx.c \
