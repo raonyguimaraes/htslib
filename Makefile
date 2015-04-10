@@ -147,10 +147,13 @@ print-version:
 
 
 LIBHTS_OBJS = \
+	bam_baq.o \
 	kfunc.o \
 	knetfile.o \
+	kprobaln.o \
 	kstring.o \
 	bgzf.o \
+	errmod.o \
 	faidx.o \
 	hfile.o \
 	hfile_net.o \
@@ -247,6 +250,7 @@ synced_bcf_reader.o synced_bcf_reader.pico: synced_bcf_reader.c config.h $(htsli
 vcf_sweep.o vcf_sweep.pico: vcf_sweep.c config.h $(htslib_vcf_sweep_h) $(htslib_bgzf_h)
 vcfutils.o vcfutils.pico: vcfutils.c config.h $(htslib_vcfutils_h)
 kfunc.o kfunc.pico: kfunc.c $(htslib_kfunc_h)
+kprobaln.o kprobaln.pico: kprobaln.c htslib/kprobaln.h
 regidx.o regidx.pico: regidx.c config.h $(htslib_hts_h) $(htslib_kstring_h) $(htslib_kseq_h) $(htslib_khash_str2int_h) $(htslib_regidx_h)
 md5.o md5.pico: md5.c config.h $(htslib_hts_h)
 
@@ -268,7 +272,6 @@ cram/string_alloc.o cram/string_alloc.pico: cram/string_alloc.c config.h cram/st
 cram/thread_pool.o cram/thread_pool.pico: cram/thread_pool.c config.h cram/thread_pool.h
 cram/vlen.o cram/vlen.pico: cram/vlen.c config.h cram/vlen.h cram/os.h
 cram/zfio.o cram/zfio.pico: cram/zfio.c config.h cram/os.h cram/zfio.h
-
 
 bgzip: bgzip.o libhts.a
 	$(CC) -pthread $(LDFLAGS) -o $@ bgzip.o libhts.a $(LDLIBS) -lz
