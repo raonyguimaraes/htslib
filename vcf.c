@@ -2209,6 +2209,22 @@ int bcf_index_build(const char *fn, int min_shift)
 
 int bcf_hdr_combine(bcf_hdr_t *dst, const bcf_hdr_t *src)
 {
+    fprintf(stderr,"Please use bcf_hdr_merge instead, bcf_hdr_combine will be deprecated\n");
+    assert(0);  // todo
+}
+
+bcf_hdr_t *bcf_hdr_merge(bcf_hdr_t *dst, const bcf_hdr_t *src)
+{
+    if ( !dst )
+    {
+        // this will effectively strip existing IDX attributes from src to become dst
+        dst = bcf_hdr_init("r");
+        char *htxt = bcf_hdr_fmt_text(src, 0, NULL);
+        bcf_hdr_parse(dst, htxt);
+        free(htxt);
+        return dst;
+    }
+
     int i, ndst_ori = dst->nhrec, need_sync = 0, ret = 0;
     for (i=0; i<src->nhrec; i++)
     {
@@ -2268,7 +2284,7 @@ int bcf_hdr_combine(bcf_hdr_t *dst, const bcf_hdr_t *src)
         }
     }
     if ( need_sync ) bcf_hdr_sync(dst);
-    return ret;
+    return dst;
 }
 int bcf_translate(const bcf_hdr_t *dst_hdr, bcf_hdr_t *src_hdr, bcf1_t *line)
 {
