@@ -114,6 +114,28 @@ int _regidx_build_index(regidx_t *idx)
     return 0;
 }
 
+int regidx_insert_list(regidx_t *idx, char *line, char delim)
+{
+    kstring_t tmp = {0,0,0};
+    char *ss = line;
+    while ( *ss )
+    {
+        char *se = ss;
+        while ( *se && *se!=delim ) se++;
+        tmp.l = 0;
+        kputsn(ss, se-ss, &tmp);
+        if ( regidx_insert(idx,tmp.s) < 0 )
+        {
+            free(tmp.s);
+            return -1;
+        }
+        if ( !*se ) break;
+        ss = se+1;
+    }
+    free(tmp.s);
+    return 0;
+}
+
 int regidx_insert(regidx_t *idx, char *line)
 {
     if ( !line )
@@ -335,6 +357,42 @@ int regidx_parse_tab(const char *line, char **chr_beg, char **chr_end, reg_t *re
         else reg->end--;
     }
     
+    return 0;
+}
+
+int regidx_parse_reg(const char *line, char **chr_beg, char **chr_end, reg_t *reg, void *payload, void *usr)
+{
+    char *ss = (char*) line;
+    while ( *ss && isspace(*ss) ) ss++;
+    if ( !*ss ) return -1;      // skip blank lines
+    if ( *ss=='#' ) return -1;  // skip comments
+    
+    char *se = ss;
+    while ( *se && *se!=':' ) se++;
+
+    *chr_beg = ss;
+    *chr_end = se-1;
+
+    if ( !*se )
+    {
+        reg->start = 0;
+        reg->end   = INT_MAX;
+        return 0;
+    }
+
+    ss = se+1;
+    reg->start = hts_parse_decimal(ss, &se) - 1;
+    if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
+
+    if ( !se[0] || !se[1] )
+        reg->end = se[0]=='-' ? INT_MAX : reg->start;
+    else
+    {
+        ss = se+1;
+        reg->end = hts_parse_decimal(ss, &se);
+        if ( ss==se ) reg->end = reg->start;
+        else reg->end--;
+    }
     return 0;
 }
 
