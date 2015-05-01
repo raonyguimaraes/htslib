@@ -813,7 +813,9 @@ static void _regions_add(bcf_sr_regions_t *reg, const char *chr, int start, int 
     }
     else
     {
-        start--; end--; // store 0-based coordinates
+        // store 0-based coordinates
+        if ( start > 0 ) start--;
+        if ( end > 0 ) end--;
     }
 
     if ( !reg->seq_hash )
