@@ -2860,6 +2860,8 @@ int bcf_update_info(const bcf_hdr_t *hdr, bcf1_t *line, const char *key, const v
         line->d.shared_dirty |= BCF1_DIRTY_INF;
     }
     line->unpacked |= BCF_UN_INFO;
+
+    if ( n==1 && !strcmp("END",key) ) line->rlen = ((int32_t*)values)[0];
     return 0;
 }
 
@@ -3068,6 +3070,11 @@ static inline int _bcf1_sync_alleles(const bcf_hdr_t *hdr, bcf1_t *line, int nal
         als++;
         n++;
     }
+
+    // Update REF length
+    bcf_info_t *end_info = bcf_get_info(hdr,line,"END");
+    line->rlen = end_info ? end_info->v1.i : strlen(line->d.allele[0]);
+
     return 0;
 }
 int bcf_update_alleles(const bcf_hdr_t *hdr, bcf1_t *line, const char **alleles, int nals)
