@@ -317,20 +317,7 @@ char *hts_format_description(const htsFormat *format)
     switch (format->compression) {
     case custom: kputs(" compressed", &str); break;
     case gzip:   kputs(" gzip-compressed", &str); break;
-    case bgzf:
-        switch (format->format) {
-        case bam:
-        case bcf:
-        case csi:
-        case tbi:
-            // These are by definition BGZF, so just use the generic term
-            kputs(" compressed", &str);
-            break;
-        default:
-            kputs(" BGZF-compressed", &str);
-            break;
-        }
-        break;
+    case bgzf:   kputs(" BGZF-compressed", &str); break;
     default: break;
     }
 
