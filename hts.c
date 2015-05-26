@@ -23,6 +23,8 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
 FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 DEALINGS IN THE SOFTWARE.  */
 
+#include <config.h>
+
 #include <zlib.h>
 #include <ctype.h>
 #include <stdio.h>
@@ -481,12 +483,10 @@ int hts_close(htsFile *fp)
     case cram:
         if (!fp->is_write) {
             switch (cram_eof(fp->fp.cram)) {
-            case 0:
-                fprintf(stderr, "[E::%s] Failed to decode sequence.\n", __func__);
-                return -1;
             case 2:
                 fprintf(stderr, "[W::%s] EOF marker is absent. The input is probably truncated.\n", __func__);
                 break;
+            case 0:  /* not at EOF, but may not have wanted all seqs */
             default: /* case 1, expected EOF */
                 break;
             }
