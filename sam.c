@@ -410,9 +410,7 @@ static hts_idx_t *bam_index(BGZF *fp, int min_shift)
     bam_hdr_destroy(h);
     b = bam_init1();
     while ((ret = bam_read1(fp, b)) >= 0) {
-        int l = bam_cigar2rlen(b->core.n_cigar, bam_get_cigar(b));
-        if (l == 0) l = 1; // no zero-length records
-        ret = hts_idx_push(idx, b->core.tid, b->core.pos, b->core.pos + l, bgzf_tell(fp), !(b->core.flag&BAM_FUNMAP));
+        ret = hts_idx_push(idx, b->core.tid, b->core.pos, bam_endpos(b), bgzf_tell(fp), !(b->core.flag&BAM_FUNMAP));
         if (ret < 0) goto err; // unsorted
     }
     if (ret < -1) goto err; // corrupted BAM file
@@ -462,8 +460,9 @@ static int bam_readrec(BGZF *fp, void *ignored, void *bv, int *tid, int *beg, in
     bam1_t *b = bv;
     int ret;
     if ((ret = bam_read1(fp, b)) >= 0) {
-        *tid = b->core.tid; *beg = b->core.pos;
-        *end = b->core.pos + (b->core.n_cigar? bam_cigar2rlen(b->core.n_cigar, bam_get_cigar(b)) : 1);
+        *tid = b->core.tid;
+        *beg = b->core.pos;
+        *end = bam_endpos(b);
     }
     return ret;
 }
@@ -600,20 +599,20 @@ bam_hdr_t *sam_hdr_parse(int l_text, const char *text)
     khash_t(s2i) *d;
     d = kh_init(s2i);
     for (p = text; *p; ++p) {
-        if (strncmp(p, "@SQ", 3) == 0) {
+        if (strncmp(p, "@SQ\t", 4) == 0) {
             char *sn = 0;
             int ln = -1;
             for (q = p + 4;; ++q) {
                 if (strncmp(q, "SN:", 3) == 0) {
                     q += 3;
-                    for (r = q; *r != '\t' && *r != '\n'; ++r);
+                    for (r = q; *r != '\t' && *r != '\n' && *r != '\0'; ++r);
                     sn = (char*)calloc(r - q + 1, 1);
                     strncpy(sn, q, r - q);
                     q = r;
                 } else if (strncmp(q, "LN:", 3) == 0)
                     ln = strtol(q + 3, (char**)&q, 10);
-                while (*q != '\t' && *q != '\n') ++q;
-                if (*q == '\n') break;
+                while (*q != '\t' && *q != '\n' && *q != '\0') ++q;
+                if (*q == '\0' || *q == '\n') break;
             }
             p = q;
             if (sn && ln >= 0) {
@@ -627,7 +626,7 @@ bam_hdr_t *sam_hdr_parse(int l_text, const char *text)
                 } else kh_val(d, k) = (int64_t)(kh_size(d) - 1)<<32 | ln;
             }
         }
-        while (*p != '\n') ++p;
+        while (*p != '\0' && *p != '\n') ++p;
     }
     return hdr_from_dict(d);
 }
@@ -751,6 +750,7 @@ int sam_parse1(kstring_t *s, bam_hdr_t *h, bam1_t *b)
     }
     // qname
     q = _read_token(p);
+    _parse_err(p - q > 255, "query name too long");
     kputsn_(q, p - q, &str);
     c->l_qname = p - q;
     // flag
@@ -781,9 +781,10 @@ int sam_parse1(kstring_t *s, bam_hdr_t *h, bam1_t *b)
         for (q = p; *p && *p != '\t'; ++p)
             if (!isdigit(*p)) ++n_cigar;
         if (*p++ != '\t') goto err_ret;
+        _parse_err(n_cigar == 0, "no CIGAR operations");
         _parse_err(n_cigar >= 65536, "too many CIGAR operations");
         c->n_cigar = n_cigar;
-        _get_mem(uint32_t, &cigar, &str, c->n_cigar<<2);
+        _get_mem(uint32_t, &cigar, &str, c->n_cigar * sizeof(uint32_t));
         for (i = 0; i < c->n_cigar; ++i, ++q) {
             int op;
             cigar[i] = strtol(q, &q, 10)<<BAM_CIGAR_SHIFT;
@@ -791,7 +792,8 @@ int sam_parse1(kstring_t *s, bam_hdr_t *h, bam1_t *b)
             _parse_err(op < 0, "unrecognized CIGAR operator");
             cigar[i] |= op;
         }
-        i = bam_cigar2rlen(c->n_cigar, cigar);
+        // can't use bam_endpos() directly as some fields not yet set up
+        i = (!(c->flag&BAM_FUNMAP))? bam_cigar2rlen(c->n_cigar, cigar) : 1;
     } else {
         _parse_warn(!(c->flag&BAM_FUNMAP), "mapped query must have a CIGAR; treated as unmapped");
         c->flag |= BAM_FUNMAP;
@@ -1650,7 +1652,7 @@ static void overlap_push(bam_plp_t iter, lbnode_t *node)
         tweak_overlap_quality(&a->b, &node->b);
         kh_del(olap_hash, iter->overlaps, kitr);
         assert(a->end-1 == a->s.end);
-        a->end = a->b.core.pos + bam_cigar2rlen(a->b.core.n_cigar, bam_get_cigar(&a->b));
+        a->end = bam_endpos(&a->b);
         a->s.end = a->end - 1;
     }
 }
@@ -1743,7 +1745,7 @@ int bam_plp_push(bam_plp_t iter, const bam1_t *b)
         iter->tail->b.id = iter->id++;
 #endif
         iter->tail->beg = b->core.pos;
-        iter->tail->end = b->core.pos + bam_cigar2rlen(b->core.n_cigar, bam_get_cigar(b));
+        iter->tail->end = bam_endpos(b);
         iter->tail->s = g_cstate_null; iter->tail->s.end = iter->tail->end - 1; // initialize cstate_t
         if (b->core.tid < iter->max_tid) {
             fprintf(stderr, "[bam_pileup_core] the input is not sorted (chromosomes out of order)\n");

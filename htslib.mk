@@ -53,7 +53,9 @@ HTSLIB_PUBLIC_HEADERS = \
 	$(HTSDIR)/htslib/hfile.h \
 	$(HTSDIR)/htslib/hts.h \
 	$(HTSDIR)/htslib/hts_defs.h \
+	$(HTSDIR)/htslib/kfunc.h \
 	$(HTSDIR)/htslib/khash.h \
+	$(HTSDIR)/htslib/khash_str2int.h \
 	$(HTSDIR)/htslib/klist.h \
 	$(HTSDIR)/htslib/knetfile.h \
 	$(HTSDIR)/htslib/kprobaln.h \
@@ -72,14 +74,15 @@ HTSLIB_ALL = \
 	$(HTSLIB_PUBLIC_HEADERS) \
 	$(HTSDIR)/bam_baq.c \
 	$(HTSDIR)/bgzf.c \
-	$(HTSDIR)/errmod.c \
 	$(HTSDIR)/faidx.c \
+	$(HTSDIR)/errmod.c \
 	$(HTSDIR)/hfile_internal.h \
 	$(HTSDIR)/hfile.c \
 	$(HTSDIR)/hfile_irods.c \
 	$(HTSDIR)/hfile_net.c \
 	$(HTSDIR)/hts.c \
 	$(HTSDIR)/hts_internal.h \
+	$(HTSDIR)/kfunc.c \
 	$(HTSDIR)/knetfile.c \
 	$(HTSDIR)/kprobaln.c \
 	$(HTSDIR)/kstring.c \
@@ -116,6 +119,9 @@ HTSLIB_ALL = \
 	$(HTSDIR)/cram/os.h \
 	$(HTSDIR)/cram/pooled_alloc.c \
 	$(HTSDIR)/cram/pooled_alloc.h \
+	$(HTSDIR)/cram/rANS_byte.h \
+	$(HTSDIR)/cram/rANS_static.c \
+	$(HTSDIR)/cram/rANS_static.h \
 	$(HTSDIR)/cram/sam_header.c \
 	$(HTSDIR)/cram/sam_header.h \
 	$(HTSDIR)/cram/string_alloc.c \
@@ -126,6 +132,9 @@ HTSLIB_ALL = \
 	$(HTSDIR)/cram/vlen.h \
 	$(HTSDIR)/cram/zfio.c \
 	$(HTSDIR)/cram/zfio.h
+
+$(HTSDIR)/config.h:
+	+cd $(HTSDIR) && $(MAKE) config.h
 
 $(HTSDIR)/libhts.a: $(HTSLIB_ALL)
 	+cd $(HTSDIR) && $(MAKE) lib-static
