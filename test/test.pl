@@ -34,6 +34,10 @@ my $opts = parse_params();
 
 test_vcf_api($opts,out=>'test-vcf-api.out');
 test_vcf_sweep($opts,out=>'test-vcf-sweep.out');
+test_hts_open($opts,mode=>'wb',out=>'test-hts-open.wb.out');
+test_hts_open($opts,mode=>'wb0',out=>'test-hts-open.wb0.out');
+test_hts_open($opts,mode=>'wu',out=>'test-hts-open.wu.out');
+test_hts_open($opts,mode=>'wg',out=>'test-hts-open.wg.out');
 
 print "\nNumber of tests:\n";
 printf "    total   .. %d\n", $$opts{nok}+$$opts{nfailed};
@@ -198,5 +202,11 @@ sub test_vcf_sweep
 {
     my ($opts,%args) = @_;
     test_cmd($opts,%args,cmd=>"$$opts{path}/test-vcf-sweep $$opts{tmp}/test-vcf-api.bcf");
+}
+
+sub test_hts_open
+{
+    my ($opts,%args) = @_;
+    test_cmd($opts,%args,cmd=>"$$opts{path}/test-hts-open $$opts{tmp}/test-hts-open.$args{mode}.bcf $args{mode} && cat $$opts{tmp}/test-hts-open.$args{mode}.bcf");
 }
 
