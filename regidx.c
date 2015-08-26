@@ -319,11 +319,11 @@ int regidx_parse_bed(const char *line, char **chr_beg, char **chr_end, reg_t *re
     *chr_end = se-1;
 
     ss = se+1;
-    reg->start = hts_parse_decimal(ss, &se);
+    reg->start = hts_parse_decimal(ss, &se, 0);
     if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
 
     ss = se+1;
-    reg->end = hts_parse_decimal(ss, &se) - 1;
+    reg->end = hts_parse_decimal(ss, &se, 0) - 1;
     if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
     
     return 0;
@@ -344,7 +344,7 @@ int regidx_parse_tab(const char *line, char **chr_beg, char **chr_end, reg_t *re
     *chr_end = se-1;
 
     ss = se+1;
-    reg->start = hts_parse_decimal(ss, &se);
+    reg->start = hts_parse_decimal(ss, &se, 0);
     if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
     if ( reg->start > 0 ) reg->start--;
 
@@ -353,7 +353,7 @@ int regidx_parse_tab(const char *line, char **chr_beg, char **chr_end, reg_t *re
     else
     {
         ss = se+1;
-        reg->end = hts_parse_decimal(ss, &se);
+        reg->end = hts_parse_decimal(ss, &se, 0);
         if ( ss==se ) reg->end = reg->start;
         else if ( reg->end > 0 ) reg->end--;
     }
@@ -382,7 +382,7 @@ int regidx_parse_reg(const char *line, char **chr_beg, char **chr_end, reg_t *re
     }
 
     ss = se+1;
-    reg->start = hts_parse_decimal(ss, &se);
+    reg->start = hts_parse_decimal(ss, &se, 0);
     if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
     if ( reg->start > 0 ) reg->start--;
 
@@ -391,7 +391,7 @@ int regidx_parse_reg(const char *line, char **chr_beg, char **chr_end, reg_t *re
     else
     {
         ss = se+1;
-        reg->end = hts_parse_decimal(ss, &se);
+        reg->end = hts_parse_decimal(ss, &se, 0);
         if ( ss==se ) reg->end = reg->start;
         else if ( reg->end > 0 ) reg->end--;
     }
