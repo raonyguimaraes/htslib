@@ -344,7 +344,7 @@ int regidx_parse_tab(const char *line, char **chr_beg, char **chr_end, reg_t *re
     *chr_end = se-1;
 
     ss = se+1;
-    reg->start = hts_parse_decimal(ss, &se, 0) - 1;
+    reg->start = hts_parse_decimal(ss, &se, 0);
     if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
     if ( reg->start > 0 ) reg->start--;
 

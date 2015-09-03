@@ -28,8 +28,27 @@
 #include <stdio.h>
 #include <ctype.h>
 #include <string.h>
+#include <getopt.h>
 #include <htslib/regidx.h>
 
+static int verbose = 0;
+
+void debug(const char *format, ...)
+{
+    if ( verbose<2 ) return;
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+}
+void info(const char *format, ...)
+{
+    if ( verbose<1 ) return;
+    va_list ap;
+    va_start(ap, format);
+    vfprintf(stderr, format, ap);
+    va_end(ap);
+}
 void error(const char *format, ...)
 {
     va_list ap;
@@ -71,7 +90,7 @@ void custom_free(void *payload)
     free(*dat);
 }
 
-int main(int argc, char **argv)
+void test_custom_payload(void)
 {
     // Init index with no file name, we will insert the regions manually
     regidx_t *idx = regidx_init(NULL,custom_parse,custom_free,sizeof(char*),NULL);
@@ -109,7 +128,132 @@ int main(int argc, char **argv)
 
     // Clean up
     regidx_destroy(idx);
-    
+}
+
+void create_line_bed(char *line, char *chr, int start, int end)
+{
+    sprintf(line,"%s\t%d\t%d\n",chr,start-1,end);
+}
+void create_line_tab(char *line, char *chr, int start, int end)
+{
+    sprintf(line,"%s\t%d\t%d\n",chr,start,end);
+}
+void create_line_reg(char *line, char *chr, int start, int end)
+{
+    sprintf(line,"%s:%d-%d\n",chr,start,end);
+}
+
+typedef void (*set_line_f)(char *line, char *chr, int start, int end);
+
+void test(set_line_f set_line, regidx_parse_f parse)
+{
+    regidx_t *idx = regidx_init(NULL,parse,NULL,0,NULL);
+    if ( !idx ) error("init failed\n");
+
+    char line[250], *chr = "1";
+    int i, n = 10, start, end, nhit;
+    for (i=1; i<n; i++)
+    {
+        start = end = 10*i;
+        set_line(line,chr,start,end);
+        if ( regidx_insert(idx,line)!=0 ) error("insert failed: %s\n", line);
+        debug("insert: %s", line);
+
+        start = end = 10*i + 1;
+        set_line(line,chr,start,end);
+        if ( regidx_insert(idx,line)!=0 ) error("insert failed: %s\n", line);
+        debug("insert: %s", line);
+    }
+    regidx_insert(idx,NULL);
+
+    regitr_t itr;
+    for (i=1; i<n; i++)
+    {
+        // no hit
+        start = end = 10*i - 1;
+        if ( regidx_overlap(idx,chr,start-1,end-1,&itr) ) error("query failed, there should be no hit: %s:%d-%d\n",chr,start,end);
+
+
+        // one hit
+        start = end = 10*i;
+        if ( !regidx_overlap(idx,chr,start-1,end-1,&itr) ) error("query failed, there should be a hit: %s:%d-%d\n",chr,start,end);
+        nhit = 0;
+        while ( REGITR_OVERLAP(itr,start-1,end-1) )
+        {
+            nhit++;
+            itr.i++;
+        }
+        if ( nhit!=1 ) error("query failed, expected one hit, found %d: %s:%d-%d\n",nhit,chr,start,end);
+
+
+        // one hit
+        start = end = 10*i+1;
+        if ( !regidx_overlap(idx,chr,start-1,end-1,&itr) ) error("query failed, there should be a hit: %s:%d-%d\n",chr,start,end);
+        nhit = 0;
+        while ( REGITR_OVERLAP(itr,start-1,end-1) )
+        {
+            nhit++;
+            itr.i++;
+        }
+        if ( nhit!=1 ) error("query failed, expected one hit, found %d: %s:%d-%d\n",nhit,chr,start,end);
+
+
+        // two hits
+        start = 10*i; end = start+1;
+        if ( !regidx_overlap(idx,chr,start-1,end-1,&itr) ) error("query failed, there should be a hit: %s:%d-%d\n",chr,start,end);
+        nhit = 0;
+        while ( REGITR_OVERLAP(itr,start-1,end-1) )
+        {
+            nhit++;
+            itr.i++;
+        }
+        if ( nhit!=2 ) error("query failed, expected two hits, found %d: %s:%d-%d\n",nhit,chr,start,end);
+
+    }
+
+    regidx_destroy(idx);
+}
+
+static void usage(void)
+{
+    fprintf(stderr, "Usage: test-regidx [OPTIONS]\n");
+    fprintf(stderr, "Options:\n");
+    fprintf(stderr, "   -h, --help          this help message\n");
+    fprintf(stderr, "   -v, --verbose       increase verbosity by giving multiple times\n");
+
+    exit(1);
+}
+
+int main(int argc, char **argv)
+{
+    static struct option loptions[] =
+    {
+        {"help",0,0,'h'},
+        {"verbose",0,0,'v'},
+        {0,0,0,0}
+    };
+    char c;
+    while ((c = getopt_long(argc, argv, "hv",loptions,NULL)) >= 0) 
+    {
+        switch (c)
+        {
+            case 'v': verbose++; break;
+            default: usage(); break;
+        }
+    }
+
+    info("Testing TAB\n");
+    test(create_line_tab,regidx_parse_tab);
+
+    info("Testing REG\n");
+    test(create_line_reg,regidx_parse_reg);
+
+    info("Testing BED\n");
+    test(create_line_bed,regidx_parse_bed);
+
+    info("Testing custom payload\n");
+    test_custom_payload();
+
     return 0;
 }
 
