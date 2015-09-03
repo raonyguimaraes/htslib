@@ -338,15 +338,16 @@ int regidx_parse_tab(const char *line, char **chr_beg, char **chr_end, reg_t *re
     
     char *se = ss;
     while ( *se && !isspace(*se) ) se++;
-    if ( !*se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
+    if ( !*se ) { fprintf(stderr,"Could not parse tab line: %s\n", line); return -2; }
 
     *chr_beg = ss;
     *chr_end = se-1;
 
     ss = se+1;
     reg->start = hts_parse_decimal(ss, &se, 0);
-    if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
-    if ( reg->start > 0 ) reg->start--;
+    if ( ss==se ) { fprintf(stderr,"Could not parse tab line: %s\n", line); return -2; }
+    if ( reg->start==0 ) { fprintf(stderr,"Could not parse tab line, expected 1-based coordinate: %s\n", line); return -2; }
+    reg->start--;
 
     if ( !se[0] || !se[1] )
         reg->end = reg->start;
@@ -355,9 +356,9 @@ int regidx_parse_tab(const char *line, char **chr_beg, char **chr_end, reg_t *re
         ss = se+1;
         reg->end = hts_parse_decimal(ss, &se, 0);
         if ( ss==se ) reg->end = reg->start;
-        else if ( reg->end > 0 ) reg->end--;
+        else if ( reg->end==0 ) { fprintf(stderr,"Could not parse tab line, expected 1-based coordinate: %s\n", line); return -2; }
+        else reg->end--;
     }
-    
     return 0;
 }
 
@@ -383,8 +384,9 @@ int regidx_parse_reg(const char *line, char **chr_beg, char **chr_end, reg_t *re
 
     ss = se+1;
     reg->start = hts_parse_decimal(ss, &se, 0);
-    if ( ss==se ) { fprintf(stderr,"Could not parse bed line: %s\n", line); return -2; }
-    if ( reg->start > 0 ) reg->start--;
+    if ( ss==se ) { fprintf(stderr,"Could not parse reg line: %s\n", line); return -2; }
+    if ( reg->start==0 ) { fprintf(stderr,"Could not parse reg line, expected 1-based coordinate: %s\n", line); return -2; }
+    reg->start--;
 
     if ( !se[0] || !se[1] )
         reg->end = se[0]=='-' ? INT_MAX : reg->start;
@@ -393,7 +395,8 @@ int regidx_parse_reg(const char *line, char **chr_beg, char **chr_end, reg_t *re
         ss = se+1;
         reg->end = hts_parse_decimal(ss, &se, 0);
         if ( ss==se ) reg->end = reg->start;
-        else if ( reg->end > 0 ) reg->end--;
+        else if ( reg->end==0 ) { fprintf(stderr,"Could not parse reg line, expected 1-based coordinate: %s\n", line); return -2; }
+        else reg->end--;
     }
     return 0;
 }
