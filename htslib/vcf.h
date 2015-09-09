@@ -102,9 +102,9 @@ typedef struct {
 } bcf_idpair_t;
 
 typedef struct {
-    int32_t n[3];
+    int32_t n[3], m[3];     // n:the size of the dictionary block in use, m: allocated size
     bcf_idpair_t *id[3];
-    void *dict[3]; // ID dictionary, contig dict and sample dict
+    void *dict[3];          // ID dictionary, contig dict and sample dict
     char **samples;
     bcf_hrec_t **hrec;
     int nhrec, dirty;
