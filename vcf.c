@@ -3147,6 +3147,7 @@ int bcf_get_info_values(const bcf_hdr_t *hdr, bcf1_t *line, const char *tag, voi
     if ( type==BCF_HT_FLAG ) return 1;
 
     bcf_info_t *info = &line->d.info[i];
+    if ( !info->vptr ) return -3;           // the tag was marked for removal
     if ( type==BCF_HT_STR )
     {
         if ( *ndst < info->len+1 )
@@ -3222,6 +3223,7 @@ int bcf_get_format_string(const bcf_hdr_t *hdr, bcf1_t *line, const char *tag, c
         if ( line->d.fmt[i].id==tag_id ) break;
     if ( i==line->n_fmt ) return -3;                               // the tag is not present in this record
     bcf_fmt_t *fmt = &line->d.fmt[i];
+    if ( !fmt->p ) return -3;                                      // the tag was marked for removal
 
     int nsmpl = bcf_hdr_nsamples(hdr);
     if ( !*dst )
@@ -3265,6 +3267,7 @@ int bcf_get_format_values(const bcf_hdr_t *hdr, bcf1_t *line, const char *tag, v
         if ( line->d.fmt[i].id==tag_id ) break;
     if ( i==line->n_fmt ) return -3;                               // the tag is not present in this record
     bcf_fmt_t *fmt = &line->d.fmt[i];
+    if ( !fmt->p ) return -3;                                      // the tag was marked for removal
 
     if ( type==BCF_HT_STR )
     {
