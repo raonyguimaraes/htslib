@@ -289,6 +289,7 @@ bcf_hrec_t *bcf_hdr_parse_line(const bcf_hdr_t *h, const char *line, int *len)
     // structured line, e.g.
     // ##INFO=<ID=PV1,Number=1,Type=Float,Description="P-value for baseQ bias">
     // ##PEDIGREE=<Name_0=G0-ID,Name_1=G1-ID,Name_3=GN-ID>
+    // ##contig=<ID="CrazyContigName,1",length=249250621>
     int nopen = 1;
     while ( *q && *q!='\n' && nopen )
     {
@@ -376,7 +377,16 @@ int bcf_hdr_register_hrec(bcf_hdr_t *hdr, bcf_hrec_t *hrec)
 
         i = bcf_hrec_find_key(hrec,"ID");
         if ( i<0 ) return 0;
-        str = strdup(hrec->vals[i]);
+        if ( hrec->vals[i][0]=='"' )
+        {
+            int len = strlen(hrec->vals[i]);
+            assert( hrec->vals[i][len-1]=='"' );
+            hrec->vals[i][len-1] = 0;
+            str = strdup(hrec->vals[i]+1);
+            hrec->vals[i][len-1] = '"';
+        }
+        else
+            str = strdup(hrec->vals[i]);
 
         // Register in the dictionary
         vdict_t *d = (vdict_t*)hdr->dict[BCF_DT_CTG];
@@ -1804,7 +1814,7 @@ int vcf_parse(kstring_t *s, const bcf_hdr_t *h, bcf1_t *v)
                 if (hts_verbose >= 2) fprintf(stderr, "[W::%s] contig '%s' is not defined in the header. (Quick workaround: index the file with tabix.)\n", __func__, p);
                 kstring_t tmp = {0,0,0};
                 int l;
-                ksprintf(&tmp, "##contig=<ID=%s>", p);
+                ksprintf(&tmp, "##contig=<ID=\"%s\">", p);
                 bcf_hrec_t *hrec = bcf_hdr_parse_line(h,tmp.s,&l);
                 free(tmp.s);
                 if ( bcf_hdr_add_hrec((bcf_hdr_t*)h, hrec) ) bcf_hdr_sync((bcf_hdr_t*)h);
