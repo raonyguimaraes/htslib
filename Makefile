@@ -138,10 +138,13 @@ print-version:
 
 
 LIBHTS_OBJS = \
+	bam_baq.o \
 	kfunc.o \
 	knetfile.o \
+	kprobaln.o \
 	kstring.o \
 	bgzf.o \
+	errmod.o \
 	faidx.o \
 	hfile.o \
 	hfile_net.o \
