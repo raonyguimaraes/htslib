@@ -1887,4 +1887,15 @@ int bam_mplp_auto(bam_mplp_t iter, int *_tid, int *_pos, int *n_plp, const bam_p
     return ret;
 }
 
+void bam_mplp_reset(bam_mplp_t iter)
+{
+    int i;
+    for (i=0; i<iter->n; i++)
+    {
+        bam_plp_reset(iter->iter[i]);
+        iter->pos[i] = iter->min;
+    }
+    iter->min = (uint64_t)-1;
+}
+
 #endif // ~!defined(BAM_NO_PILEUP)
