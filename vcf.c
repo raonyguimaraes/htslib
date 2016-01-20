@@ -899,7 +899,7 @@ void bcf_destroy(bcf1_t *v)
 static inline int bcf_read1_core(BGZF *fp, bcf1_t *v)
 {
     uint32_t x[8];
-    int ret;
+    ssize_t ret;
     if ((ret = bgzf_read(fp, x, 32)) != 32) {
         if (ret == 0) return -1;
         return -2;
@@ -915,8 +915,12 @@ static inline int bcf_read1_core(BGZF *fp, bcf1_t *v)
     // silent fix of broken BCFs produced by earlier versions of bcf_subset, prior to and including bd6ed8b4
     if ( (!v->indiv.l || !v->n_sample) && v->n_fmt ) v->n_fmt = 0;
 
-    bgzf_read(fp, v->shared.s, v->shared.l);
-    bgzf_read(fp, v->indiv.s, v->indiv.l);
+    ret = bgzf_read(fp, v->shared.s, v->shared.l);
+    if ( ret!=v->shared.l ) return -2;
+
+    ret = bgzf_read(fp, v->indiv.s, v->indiv.l);
+    if ( ret!=v->indiv.l ) return -2;
+
     return 0;
 }
 
