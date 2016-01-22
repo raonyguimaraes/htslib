@@ -1307,18 +1307,24 @@ bcf_hdr_t *vcf_hdr_read(htsFile *fp)
     {
         int i, n, need_sync = 0;
         const char **names = tbx_seqnames(idx, &n);
+        kstring_t tmp = {0,0,0};
         for (i=0; i<n; i++)
         {
             bcf_hrec_t *hrec = bcf_hdr_get_hrec(h, BCF_HL_CTG, "ID", (char*) names[i], NULL);
             if ( hrec ) continue;
+            tmp.l = 0;
+            kputc('"',&tmp);
+            kputs(names[i],&tmp);
+            kputc('"',&tmp);
             hrec = (bcf_hrec_t*) calloc(1,sizeof(bcf_hrec_t));
             hrec->key = strdup("contig");
             bcf_hrec_add_key(hrec, "ID", strlen("ID"));
-            bcf_hrec_set_val(hrec, hrec->nkeys-1, (char*) names[i], strlen(names[i]), 0);
+            bcf_hrec_set_val(hrec, hrec->nkeys-1, tmp.s, tmp.l, 0);
             bcf_hdr_add_hrec(h, hrec);
             need_sync = 1;
         }
         free(names);
+        free(tmp.s);
         tbx_destroy(idx);
         if ( need_sync )
             bcf_hdr_sync(h);
