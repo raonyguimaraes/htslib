@@ -91,3 +91,11 @@ LDFLAGS += $(noplugin_LDFLAGS)
 LIBS += $(noplugin_LIBS)
 
 endif
+
+ifeq "openssl-@openssl@" "openssl-enabled"
+
+LIBS += `pkg-config openssl --libs`
+
+endif
+
+

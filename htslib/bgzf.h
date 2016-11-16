@@ -53,6 +53,7 @@ struct hFILE;
 struct hts_tpool;
 struct bgzf_mtaux_t;
 typedef struct __bgzidx_t bgzidx_t;
+typedef struct __bgzf_aux_t bgzf_aux_t;
 
 struct BGZF {
     unsigned errcode:16, is_write:2, is_be:2;
@@ -68,6 +69,7 @@ struct BGZF {
     bgzidx_t *idx;      // BGZF index
     int idx_build_otf;  // build index on the fly, set by bgzf_index_build_init()
     z_stream *gz_stream;// for gzip-compressed files
+    bgzf_aux_t *aux;
 };
 #ifndef HTS_BGZF_TYPEDEF
 typedef struct BGZF BGZF;
@@ -120,6 +122,14 @@ typedef struct __kstring_t {
      * @return      0 on success and -1 on error
      */
     int bgzf_close(BGZF *fp);
+
+    /**
+     * Close the BGZF and free all associated resources except for hFILE.
+     *
+     * @param fp    BGZF file handler
+     * @return      0 on success and -1 on error
+     */
+    int bgzf_hclose(BGZF *fp);
 
     /**
      * Read up to _length_ bytes from the file storing into _data_.

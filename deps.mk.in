@@ -1,0 +1,7 @@
+
+ifeq "openssl-@openssl@" "openssl-enabled"
+
+HTSLIB_LIBS += `pkg-config openssl --libs`
+
+endif
+

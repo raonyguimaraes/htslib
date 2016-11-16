@@ -190,9 +190,27 @@ int hts_detect_format(hFILE *hfile, htsFormat *fmt)
     if (len >= 2 && s[0] == 0x1f && s[1] == 0x8b) {
         // The stream is either gzip-compressed or BGZF-compressed.
         // Determine which, and decompress the first few bytes.
-        fmt->compression = (len >= 18 && (s[3] & 4) &&
-                            memcmp(&s[12], "BC\2\0", 4) == 0)? bgzf : gzip;
-        len = decompress_peek(hfile, s, sizeof s);
+        if ( len<18 || !(s[3] & 4) )
+        {
+            fmt->compression = gzip;
+            len = decompress_peek(hfile, s, sizeof s);
+        }
+        else if ( memcmp(&s[12], "BC\2\0", 4) == 0 )
+        {
+            fmt->compression = bgzf;
+            len = decompress_peek(hfile, s, sizeof s);
+        }
+        else if ( !memcmp(&s[12], "EC\2\0", 4) || !memcmp(&s[12], "DC\2\0", 4) )
+        {
+            // temporary, not optimal
+            fmt->compression = bgzf;
+            BGZF *fp = bgzf_hopen(hfile, "r");
+            if ( !fp ) return -1;
+            len = bgzf_read(fp, s, sizeof s);
+            int ret = bgzf_seek(fp,0,SEEK_SET);
+            bgzf_hclose(fp);
+            if ( ret<0 ) return -1;
+        }
     }
     else {
         fmt->compression = no_compression;

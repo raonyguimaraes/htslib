@@ -33,14 +33,15 @@ use IO::Handle;
 
 my $opts = parse_params();
 
-test_view($opts,0);
-test_view($opts,4);
-
-test_vcf_api($opts,out=>'test-vcf-api.out');
-test_vcf_sweep($opts,out=>'test-vcf-sweep.out');
-test_vcf_various($opts);
-test_convert_padded_header($opts);
-test_rebgzip($opts);
+test_crypto($opts);
+#   test_view($opts,0);
+#   test_view($opts,4);
+#   
+#   test_vcf_api($opts,out=>'test-vcf-api.out');
+#   test_vcf_sweep($opts,out=>'test-vcf-sweep.out');
+#   test_vcf_various($opts);
+#   test_convert_padded_header($opts);
+#   test_rebgzip($opts);
 
 print "\nNumber of tests:\n";
 printf "    total   .. %d\n", $$opts{nok}+$$opts{nfailed};
@@ -114,7 +115,7 @@ sub cmd
 sub test_cmd
 {
     my ($opts,%args) = @_;
-    if ( !exists($args{out}) )
+    if ( !exists($args{out}) && !exists($args{exp}) )
     {
         if ( !exists($args{in}) ) { error("FIXME: expected out or in key\n"); }
         $args{out} = "$args{in}.out";
@@ -143,13 +144,17 @@ sub test_cmd
         }
     }
     my $exp = '';
-    if ( open(my $fh,'<',"$$opts{path}/$args{out}") )
+    if ( exists($args{exp}) ) { $exp = $args{exp}; }
+    else
     {
-        my @exp = <$fh>;
-        $exp = join('',@exp);
-        close($fh);
+        if ( open(my $fh,'<',"$$opts{path}/$args{out}") )
+        {
+            my @exp = <$fh>;
+            $exp = join('',@exp);
+            close($fh);
+        }
+        elsif ( !$$opts{redo_outputs} ) { failed($opts,$test,"$$opts{path}/$args{out}: $!"); return; }
     }
-    elsif ( !$$opts{redo_outputs} ) { failed($opts,$test,"$$opts{path}/$args{out}: $!"); return; }
 
     if ( $exp ne $out )
     {
@@ -340,3 +345,77 @@ sub test_convert_padded_header
             cmd => "$$opts{path}/test_view -t ce.fa -C $nulsbam");
     }
 }
+
+sub gen_key
+{
+    # generate random key
+    my $cmd = "dd if=/dev/urandom bs=1 count=32 2>/dev/null | xxd -ps -c32";
+    print STDERR "Creating random key:\t $cmd\n";
+    my ($key) = `$cmd`;
+    chomp($key);
+    my ($hash) = `echo "$key" | openssl sha256`;
+    chomp($hash);
+    $hash =~ s/^.*=\s*//;
+    return ($hash,$key);
+}
+sub test_crypto
+{
+    my ($opts, %args) = @_;
+
+    my $dir = "$$opts{tmp}/enc";
+    $dir =~ s{/+}{/}g;
+    cmd("mkdir -p $dir");
+
+    my ($hash1,$key1) = gen_key();
+    my ($hash2,$key2) = gen_key();
+    my ($hash3,$key3) = gen_key();
+
+    # create HTS_KEY file
+    my $keys = "$dir/hts-keys.txt";
+    open(my $fh,'>',$keys) or error("$keys: $!");
+    print $fh "# [1]Public SHA256 digest of the key\t[2]Private symmetric encryption key\n";
+    print $fh "$hash1\t$key1\n";
+    print $fh "$hash2\t$key2\n";
+    print $fh "$hash3\t$key3\n";
+    close($fh) or error("close failed: $keys");
+
+    my @idx = ();
+    my $exp = '';
+    open($fh,'>',"$dir/test.txt") or error("$dir/test.txt: $!");
+    for (my $i=1; $i<1024*10; $i++) 
+    { 
+        my $pos  = $i*100;
+        my $line = "1\t$pos\t";
+        for (my $j=0; $j<60; $j++)
+        {
+            my $char = ($i-1)*60 + $j;
+            $line .= chr(65 + ($char%26));
+        }
+        $line .= "\n";
+        $exp  .= $line;
+        print $fh $line;
+
+        if ( !($i % 1000) ) { push @idx, {pos=>"1:$pos-$pos",exp=>$line}; }
+    }
+    close($fh) or error("close failed: $dir/test.txt");
+
+    my $cmd = "HTS_KEYS=$keys HTS_ENC=$hash3 $$opts{bin}/bgzip -c $dir/test.txt > $dir/test.enc.gz";
+    print STDERR "Encrypting:\t $cmd\n";
+    cmd($cmd);
+
+    $cmd = "HTS_KEYS=$keys $$opts{bin}/bgzip -c -d $dir/test.enc.gz";
+    print STDERR "Decrypting:\t $cmd\n";
+    test_cmd($opts, exp=>$exp, cmd=>$cmd, out=>'crypto-dec.txt');
+
+    $cmd = "HTS_KEYS=$keys $$opts{bin}/tabix -s1 -b2 -e2 $dir/test.enc.gz";
+    print STDERR "Indexing:\t $cmd\n";
+    `$cmd`;
+    for (my $i=0; $i<@idx; $i++)
+    {
+        my $idx = $idx[$i];
+        $cmd = "HTS_KEYS=$keys $$opts{bin}/tabix $dir/test.enc.gz $$idx{pos}";
+        test_cmd($opts, exp=>$$idx{exp}, cmd=>$cmd, out=>"crypto-idx-$i.txt");
+        last;
+    }
+}
+

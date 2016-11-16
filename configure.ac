@@ -58,6 +58,11 @@ AC_ARG_ENABLE([libcurl],
                   [enable libcurl-based support for http/https/etc URLs])],
   [], [enable_libcurl=no])
 
+AC_ARG_ENABLE([openssl],
+  [AS_HELP_STRING([--enable-openssl],
+                  [enable openssl-based support for encrypted BGZF])],
+  [], [enable_openssl=no])
+
 AC_ARG_ENABLE([plugins],
   [AS_HELP_STRING([--enable-plugins],
                   [enable separately-compiled plugins for file access])],
@@ -196,5 +201,15 @@ Either configure with --disable-libcurl or resolve this error to build HTSlib.])
 fi
 AC_SUBST([CRYPTO_LIBS])
 
-AC_CONFIG_FILES(config.mk)
+openssl=disabled
+if test "$enable_openssl" != no; then
+  AC_CHECK_LIB([ssl], [SSL_library_init],
+    [AC_DEFINE([USE_CRYPTO], 1, [Define if BGZF encryption using openssl is enabled.])
+     openssl=enabled],
+    [AC_MSG_ERROR([SSL development files not found])])
+  enable_openssl=yes
+fi
+AC_SUBST([openssl])
+
+AC_CONFIG_FILES(config.mk deps.mk)
 AC_OUTPUT
