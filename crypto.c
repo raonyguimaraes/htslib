@@ -191,21 +191,54 @@ static inline int openssl_decrypt(unsigned char *ciphertext, int ciphertext_len,
     return ciphertext_len - plaintext_len;
 }
 
-int encrypt_buffer(crypto_t *crypto, uint8_t *buffer, int length)
+// uint64_t offset, uint8_t ivec[16]
+static inline void set_iv(crypto_t *crypto, uint8_t *offset, uint8_t *ivec)
 {
-    hts_expand(uint8_t, length + 16, crypto->mbuf, crypto->buf);
-    int aes_padding = openssl_encrypt(buffer, length, crypto->key, crypto->ivec, crypto->buf);
-    memcpy(buffer, crypto->buf, length+aes_padding);
+    int i;
+    memcpy(ivec, crypto->ivec, 16);
+    if ( ed_is_big() )
+        for (i=0; i<8; i++) ivec[i] ^= offset[8-i-1];
+    else
+        for (i=0; i<8; i++) ivec[i] ^= offset[i];
+}
+
+int encrypt_buffer(crypto_t *crypto, uint64_t offset, uint8_t *buffer, int plaintext_len)
+{
+    int len, ciphertext_len;
+    uint8_t ivec[16];
+    hts_expand(uint8_t, plaintext_len + 16, crypto->mbuf, crypto->buf);
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if ( !ctx ) openssl_handle_errors();
+    set_iv(crypto, (uint8_t*)&offset, (uint8_t*)ivec);
+    if ( EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, crypto->key, ivec) != 1 ) openssl_handle_errors();
+    if ( EVP_EncryptUpdate(ctx, crypto->buf, &len, buffer, plaintext_len) != 1 ) openssl_handle_errors();
+    ciphertext_len = len;
+    if ( EVP_EncryptFinal_ex(ctx, crypto->buf + len, &len) != 1 ) openssl_handle_errors();
+    ciphertext_len += len;
+    EVP_CIPHER_CTX_free(ctx);
+    int aes_padding = ciphertext_len - plaintext_len;
+    memcpy(buffer, crypto->buf, plaintext_len + aes_padding);
     return aes_padding;
 }
 
 // This can generate valgrind's uninitialized memory warnings. Apparently
 // openssl increases entropy this way, the data should be ok though.
-int decrypt_buffer(crypto_t *crypto, uint8_t *buffer, int length)
+int decrypt_buffer(crypto_t *crypto, uint64_t offset, uint8_t *buffer, int ciphertext_len)
 {
-    hts_expand(uint8_t, length, crypto->mbuf, crypto->buf);
-    int aes_padding = openssl_decrypt(buffer, length, crypto->key, crypto->ivec, crypto->buf);
-    memcpy(buffer, crypto->buf, length - aes_padding);
+    int len, plaintext_len;
+    uint8_t ivec[16];
+    hts_expand(uint8_t, ciphertext_len, crypto->mbuf, crypto->buf);
+    EVP_CIPHER_CTX *ctx = EVP_CIPHER_CTX_new();
+    if ( !ctx ) openssl_handle_errors();
+    set_iv(crypto, (uint8_t*)&offset, (uint8_t*)ivec);
+    if ( EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), NULL, crypto->key, ivec) != 1 ) openssl_handle_errors();
+    if ( EVP_DecryptUpdate(ctx, crypto->buf, &len, buffer, ciphertext_len) != 1 ) openssl_handle_errors();
+    plaintext_len = len;
+    if ( EVP_DecryptFinal_ex(ctx, crypto->buf + len, &len) != 1 ) openssl_handle_errors();
+    plaintext_len += len;
+    EVP_CIPHER_CTX_free(ctx);
+    int aes_padding =  ciphertext_len - plaintext_len;
+    memcpy(buffer, crypto->buf, ciphertext_len - aes_padding);
     return aes_padding;
 }
 #endif // USE_OPENSSL

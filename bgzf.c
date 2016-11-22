@@ -476,7 +476,7 @@ int _bgzf_compress(BGZF *fp, void *_dst, size_t *dlen, const void *src, size_t s
         else
             magic = ec_magic;
 
-        padding += encrypt_buffer(&fp->aux->crypto, dst + padding, zs.total_out);
+        padding += encrypt_buffer(&fp->aux->crypto, fp->block_address, dst + padding, zs.total_out);
     }
 #endif
     *dlen = zs.total_out + padding + BLOCK_FOOTER_LENGTH;
@@ -952,7 +952,7 @@ int bgzf_read_block(BGZF *fp)
 #if USE_CRYPTO
     if ( header[12]!='B' )
     {
-        int aes_padding = decrypt_buffer(&fp->aux->crypto, compressed_block + BLOCK_HEADER_LENGTH, remaining - BLOCK_FOOTER_LENGTH);
+        int aes_padding = decrypt_buffer(&fp->aux->crypto, block_address, compressed_block + BLOCK_HEADER_LENGTH, remaining - BLOCK_FOOTER_LENGTH);
         block_length -= aes_padding;
     }
 #endif

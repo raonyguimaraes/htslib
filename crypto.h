@@ -55,8 +55,8 @@ void crypto_destroy(crypto_t *crypto);
 int crypto_set_key(crypto_t *crypto, const char *hashed_key);
 int crypto_set_ivec(crypto_t *crypto, const uint8_t *ivec);
 
-int encrypt_buffer(crypto_t *aes, uint8_t *buffer, int length);
-int decrypt_buffer(crypto_t *aes, uint8_t *buffer, int length);
+int encrypt_buffer(crypto_t *aes, uint64_t offset, uint8_t *buffer, int length);
+int decrypt_buffer(crypto_t *aes, uint64_t offset, uint8_t *buffer, int length);
 
 #endif
 #endif
