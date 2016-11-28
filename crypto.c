@@ -83,6 +83,7 @@ static int _crypto_init_lib(crypto_t *crypto, kstring_t *str, const char *hts_ke
 int crypto_set_key(crypto_t *crypto, const char *hashed_key)
 {
     khash_t(str2str) *lib = (khash_t(str2str)*) crypto->lib;
+    if ( !lib ) return -1;
     khint_t k = kh_get(str2str, lib, hashed_key);
     if ( k == kh_end(lib) ) return -1;
     memcpy(crypto->key, kh_val(lib,k), sizeof(crypto->key));
