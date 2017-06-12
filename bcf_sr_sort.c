@@ -26,28 +26,13 @@
 
 #include "bcf_sr_sort.h"
 #include "htslib/khash_str2int.h"
+#include "htslib/kbitset.h"
 
 #define SR_REF   1
 #define SR_SNP   2
 #define SR_INDEL 4
 #define SR_OTHER 8
 #define SR_SCORE(srt,a,b) (srt)->score[((a)<<4)|(b)]
-
-// Resize a bit set.
-static inline kbitset_t *kbs_resize(kbitset_t *bs, size_t ni)
-{
-    if ( !bs ) return kbs_init(ni);
-    size_t n = (ni + KBS_ELTBITS-1) / KBS_ELTBITS;
-    if ( n==bs->n ) return bs;
-
-    bs = (kbitset_t *) realloc(bs, sizeof(kbitset_t) + n * sizeof(unsigned long));
-    if ( bs==NULL ) return NULL;
-    if ( n > bs->n )
-        memset(bs->b + bs->n, 0, (n - bs->n) * sizeof (unsigned long));
-    bs->n = n;
-    bs->b[n] = ~0UL;
-    return bs;
-}
 
 // Logical AND
 static inline int kbs_logical_and(kbitset_t *bs1, kbitset_t *bs2)
