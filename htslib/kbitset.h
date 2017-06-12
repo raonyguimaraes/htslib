@@ -37,7 +37,7 @@
 
 	if (kbs_exists(bset, 68)) printf("68 present\n");
 
-	kbitset_iter itr;
+	kbitset_iter_t itr;
 	int i;
 	kbs_start(&itr);
 	while ((i = kbs_next(bset, &itr)) >= 0)
@@ -61,7 +61,7 @@
 #define KBS_MASK(i) (1UL << ((i) % KBS_ELTBITS))
 
 typedef struct kbitset_t {
-	size_t n;
+	size_t n, m;
 	unsigned long b[1];
 } kbitset_t;
 
@@ -95,6 +95,23 @@ static inline void kbs_destroy(kbitset_t *bs)
 static inline void kbs_clear(kbitset_t *bs)
 {
 	memset(bs->b, 0, bs->n * sizeof (unsigned long));
+}
+
+// Resize and clear a bit set
+static inline kbitset_t *kbs_resize(kbitset_t *bs, size_t ni)
+{
+    size_t n = (ni + KBS_ELTBITS-1) / KBS_ELTBITS;
+    if ( !bs || n >= bs->m )
+    {
+        kbitset_t *ori = bs;
+        bs = (kbitset_t*) realloc(bs, sizeof(kbitset_t) + n * sizeof(unsigned long));
+        if ( bs==NULL ) { free(ori); return NULL; }
+        bs->m = n;
+    }
+    bs->n = n;
+	bs->b[n] = ~0UL;
+    kbs_clear(bs);
+    return bs;
 }
 
 // Reset the bit set to all of [0,ni).
