@@ -97,21 +97,21 @@ static inline void kbs_clear(kbitset_t *bs)
 	memset(bs->b, 0, bs->n * sizeof (unsigned long));
 }
 
-// Resize and clear a bit set
-static inline kbitset_t *kbs_resize(kbitset_t *bs, size_t ni)
+// Resize and clear a bit set. Returns 0 on success or -1 on memory failure.
+static inline int kbs_resize(kbitset_t **bs, size_t ni)
 {
     size_t n = (ni + KBS_ELTBITS-1) / KBS_ELTBITS;
-    if ( !bs || n >= bs->m )
+    if ( !*bs || n >= (*bs)->m )
     {
-        kbitset_t *ori = bs;
-        bs = (kbitset_t*) realloc(bs, sizeof(kbitset_t) + n * sizeof(unsigned long));
-        if ( bs==NULL ) { free(ori); return NULL; }
-        bs->m = n;
+        kbitset_t *ori = *bs;
+        *bs = (kbitset_t*) realloc(*bs, sizeof(kbitset_t) + n * sizeof(unsigned long));
+        if ( *bs==NULL ) { *bs = ori; return -1; }
+        (*bs)->m = n;
     }
-    bs->n = n;
-	bs->b[n] = ~0UL;
-    kbs_clear(bs);
-    return bs;
+    (*bs)->n = n;
+	(*bs)->b[n] = ~0UL;
+    kbs_clear(*bs);
+    return 0;
 }
 
 // Reset the bit set to all of [0,ni).

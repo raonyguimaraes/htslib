@@ -431,8 +431,11 @@ static void bcf_sr_sort_set(bcf_srs_t *readers, sr_sort_t *srt, const char *chr,
     // initialize bitmask - which groups is the variant present in
     for (ivar=0; ivar<srt->nvar; ivar++)
     {
-        srt->var[ivar].mask = kbs_resize(srt->var[ivar].mask, srt->ngrp);
-        kbs_clear(srt->var[ivar].mask);
+        if ( kbs_resize(&srt->var[ivar].mask, srt->ngrp) < 0 )
+        {
+            fprintf(stderr, "[%s:%d %s] kbs_resize failed\n", __FILE__,__LINE__,__FUNCTION__);
+            exit(1);
+        }
     }
     for (igrp=0; igrp<srt->ngrp; igrp++)
     {
@@ -455,8 +458,11 @@ static void bcf_sr_sort_set(bcf_srs_t *readers, sr_sort_t *srt, const char *chr,
         vset->var[vset->nvar-1] = ivar;
         var_t *var  = &srt->var[ivar];
         vset->cnt   = var->nvcf;
-        vset->mask  = kbs_resize(vset->mask, srt->ngrp);
-        kbs_clear(vset->mask);
+        if ( kbs_resize(&vset->mask, srt->ngrp) < 0 )
+        {
+            fprintf(stderr, "[%s:%d %s] kbs_resize failed\n", __FILE__,__LINE__,__FUNCTION__);
+            exit(1);
+        }
         kbs_bitwise_or(vset->mask, var->mask);
 
         int type = 0;
